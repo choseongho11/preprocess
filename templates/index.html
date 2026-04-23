@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>회의록 전처리 시스템 | 충청남도의회</title>
+  <meta name="description" content="충청남도의회 회의록 PDF를 업로드하면 의원 발언만 자동으로 추출·요약합니다." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <!-- 배경 오브 -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="app-wrapper">
+    <!-- 헤더 -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="logo-title">회의록 전처리 시스템</h1>
+            <p class="logo-sub">충청남도의회 · 제12대</p>
+          </div>
+        </div>
+        <button class="btn-settings" id="btnSettings" title="LLM 설정">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="currentColor" stroke-width="2"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          설정
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- 설정 패널 -->
+      <div class="settings-panel" id="settingsPanel" style="display:none;">
+        <div class="settings-card glass-card">
+          <div class="settings-header">
+            <h2>🔧 로컬 LLM 설정</h2>
+            <button class="btn-close" id="btnCloseSettings">✕</button>
+          </div>
+          <div class="settings-body">
+            <div class="form-group">
+              <label for="inputBaseUrl">API 주소 (Base URL)</label>
+              <input type="text" id="inputBaseUrl" placeholder="http://localhost:11434/v1" />
+            </div>
+            <div class="form-group">
+              <label for="inputApiKey">API 키</label>
+              <input type="text" id="inputApiKey" placeholder="ollama" />
+            </div>
+            <div class="form-group">
+              <label for="inputModel">모델명</label>
+              <input type="text" id="inputModel" placeholder="llama3" />
+            </div>
+            <div class="settings-actions">
+              <button class="btn btn-ghost" id="btnTestLlm">🔌 연결 테스트</button>
+              <button class="btn btn-primary" id="btnSaveSettings">저장</button>
+            </div>
+            <div class="test-result" id="testResult" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 업로드 섹션 -->
+      <section class="upload-section" id="uploadSection">
+        <div class="section-title">
+          <span class="step-badge">01</span>
+          <h2>PDF 파일 업로드</h2>
+        </div>
+
+        <div class="upload-zone glass-card" id="uploadZone">
+          <div class="upload-icon-wrap">
+            <div class="upload-icon">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 32L24 24L32 32" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M24 24V40" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M40.9 34.1A10 10 0 0034 16h-2.52A16 16 0 118 32.69" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <p class="upload-title">PDF 파일을 드래그하거나 클릭하여 업로드</p>
+          <p class="upload-sub">충청남도의회 회의록 PDF · 의원 발언 자동 추출</p>
+          <input type="file" id="fileInput" accept=".pdf" hidden />
+          <button class="btn btn-outline" id="btnSelectFile">파일 선택</button>
+        </div>
+
+        <!-- 선택된 파일 표시 -->
+        <div class="selected-file glass-card" id="selectedFile" style="display:none;">
+          <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div class="file-details">
+              <p class="file-name" id="selectedFileName"></p>
+              <p class="file-size" id="selectedFileSize"></p>
+            </div>
+            <button class="btn-remove" id="btnRemoveFile">✕</button>
+          </div>
+          <button class="btn btn-primary btn-process" id="btnProcess">
+            <span class="btn-icon">⚡</span>
+            처리 시작
+          </button>
+        </div>
+      </section>
+
+      <!-- 진행 섹션 -->
+      <section class="progress-section glass-card" id="progressSection" style="display:none;">
+        <div class="section-title">
+          <span class="step-badge">02</span>
+          <h2>처리 중</h2>
+        </div>
+        <div class="progress-content">
+          <div class="progress-status">
+            <div class="spinner"></div>
+            <div class="progress-text">
+              <p class="progress-label" id="progressLabel">PDF 파싱 중...</p>
+              <p class="progress-speaker" id="progressSpeaker"></p>
+            </div>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <span class="progress-pct" id="progressPct">0%</span>
+          </div>
+          <p class="progress-count" id="progressCount"></p>
+        </div>
+      </section>
+
+      <!-- 결과 섹션 -->
+      <section class="result-section" id="resultSection" style="display:none;">
+        <div class="section-title">
+          <span class="step-badge done">03</span>
+          <h2>처리 완료</h2>
+        </div>
+
+        <div class="result-stats glass-card">
+          <div class="stat-item">
+            <span class="stat-num" id="statRecords">0</span>
+            <span class="stat-label">발언 레코드</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-num" id="statFile">-</span>
+            <span class="stat-label">저장 파일명</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="result-actions">
+            <button class="btn btn-primary" id="btnDownload">⬇ 다운로드</button>
+            <button class="btn btn-ghost" id="btnReset">새 파일 처리</button>
+          </div>
+        </div>
+
+        <!-- 결과 미리보기 -->
+        <div class="preview-wrap glass-card">
+          <div class="preview-header">
+            <h3>📋 결과 미리보기</h3>
+            <button class="btn-copy" id="btnCopy">복사</button>
+          </div>
+          <pre class="preview-content" id="previewContent"></pre>
+        </div>
+      </section>
+
+      <!-- 에러 섹션 -->
+      <div class="error-card glass-card" id="errorCard" style="display:none;">
+        <div class="error-icon">⚠️</div>
+        <div class="error-body">
+          <p class="error-title">처리 중 오류가 발생했습니다</p>
+          <p class="error-msg" id="errorMsg"></p>
+        </div>
+        <button class="btn btn-ghost" id="btnErrorReset">다시 시도</button>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>충청남도의회 AI 의정브레인 · 회의록 전처리 시스템</p>
+    </footer>
+  </div>
+
+  <script src="/static/main.js"></script>
+</body>
+</html>
